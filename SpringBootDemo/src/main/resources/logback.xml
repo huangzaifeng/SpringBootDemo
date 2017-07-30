@@ -1,0 +1,54 @@
+<configuration scan="true" scanPeriod="10 seconds">
+	<include resource="org/springframework/boot/logging/logback/base.xml" />
+
+	<appender name="SystemLogger"
+		class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<File>${LOG_PATH}/system.log</File>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>${LOG_PATH}/system-%d{yyyyMMdd}.log.%i
+			</fileNamePattern>
+			<timeBasedFileNamingAndTriggeringPolicy
+				class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+				<maxFileSize>500MB</maxFileSize>
+			</timeBasedFileNamingAndTriggeringPolicy>
+			<maxHistory>2</maxHistory>
+		</rollingPolicy>
+		<encoder>
+			<Pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36}
+				-%msg%n
+			</Pattern>
+		</encoder>
+	</appender>
+
+	<!--<appender name="AlarmLogger"
+		class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<File>${LOG_PATH}/alarm.log</File>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>${LOG_PATH}/alarm-%d{yyyyMMdd}.log.%i
+			</fileNamePattern>
+			<timeBasedFileNamingAndTriggeringPolicy
+				class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+				<maxFileSize>500MB</maxFileSize>
+			</timeBasedFileNamingAndTriggeringPolicy>
+			<maxHistory>2</maxHistory>
+		</rollingPolicy>
+		<encoder>
+			<Pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36}
+				-%msg%n
+			</Pattern>
+		</encoder>
+	</appender>
+
+	<logger name="sysLogger" level="ERROE" additivity="false">
+		<appender-ref ref="SystemLogger" />
+	</logger>
+
+	<logger name="alarmLogger" level="ERROR" additivity="false">
+		<appender-ref ref="AlarmLogger" />
+	</logger>-->
+
+	<!--<logger name="root" level="ERROE" additivity="false">-->
+		<!--<appender-ref ref="SystemLogger" />-->
+	<!--</logger>-->
+
+</configuration>

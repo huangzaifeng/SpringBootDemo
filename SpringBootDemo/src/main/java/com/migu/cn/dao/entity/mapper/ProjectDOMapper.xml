@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.migu.cn.dao.inf.ProjectDOMapper" >
+  <resultMap id="BaseResultMap" type="com.migu.cn.dao.entity.ProjectDO" >
+    <id column="pid" property="pid" jdbcType="INTEGER" />
+    <result column="name" property="name" jdbcType="VARCHAR" />
+    <result column="creatorid" property="creatorid" jdbcType="INTEGER" />
+    <result column="departmentid" property="departmentid" jdbcType="INTEGER" />
+    <result column="companyid" property="companyid" jdbcType="INTEGER" />
+    <result column="projectdetail" property="projectdetail" jdbcType="VARCHAR" />
+    <result column="visible" property="visible" jdbcType="TINYINT" />
+  </resultMap>
+  <sql id="Base_Column_List" >
+    pid, name, creatorid, departmentid, companyid, projectdetail, visible
+  </sql>
+  <select id="selectByPrimaryKey" resultMap="BaseResultMap" parameterType="java.lang.Integer" >
+    select 
+    <include refid="Base_Column_List" />
+    from project
+    where pid = #{pid,jdbcType=INTEGER}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.Integer" >
+    delete from project
+    where pid = #{pid,jdbcType=INTEGER}
+  </delete>
+  <insert id="insert" parameterType="com.migu.cn.dao.entity.ProjectCriteria" >
+    insert into project (pid, name, creatorid, 
+      departmentid, companyid, projectdetail, 
+      visible)
+    values (#{pid,jdbcType=INTEGER}, #{name,jdbcType=VARCHAR}, #{creatorid,jdbcType=INTEGER}, 
+      #{departmentid,jdbcType=INTEGER}, #{companyid,jdbcType=INTEGER}, #{projectdetail,jdbcType=VARCHAR}, 
+      #{visible,jdbcType=TINYINT})
+  </insert>
+  <insert id="insertSelective" parameterType="com.migu.cn.dao.entity.ProjectCriteria" >
+    insert into project
+    <trim prefix="(" suffix=")" suffixOverrides="," >
+      <if test="pid != null" >
+        pid,
+      </if>
+      <if test="name != null" >
+        name,
+      </if>
+      <if test="creatorid != null" >
+        creatorid,
+      </if>
+      <if test="departmentid != null" >
+        departmentid,
+      </if>
+      <if test="companyid != null" >
+        companyid,
+      </if>
+      <if test="projectdetail != null" >
+        projectdetail,
+      </if>
+      <if test="visible != null" >
+        visible,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides="," >
+      <if test="pid != null" >
+        #{pid,jdbcType=INTEGER},
+      </if>
+      <if test="name != null" >
+        #{name,jdbcType=VARCHAR},
+      </if>
+      <if test="creatorid != null" >
+        #{creatorid,jdbcType=INTEGER},
+      </if>
+      <if test="departmentid != null" >
+        #{departmentid,jdbcType=INTEGER},
+      </if>
+      <if test="companyid != null" >
+        #{companyid,jdbcType=INTEGER},
+      </if>
+      <if test="projectdetail != null" >
+        #{projectdetail,jdbcType=VARCHAR},
+      </if>
+      <if test="visible != null" >
+        #{visible,jdbcType=TINYINT},
+      </if>
+    </trim>
+  </insert>
+  <update id="updateByPrimaryKeySelective" parameterType="com.migu.cn.dao.entity.ProjectCriteria" >
+    update project
+    <set >
+      <if test="name != null" >
+        name = #{name,jdbcType=VARCHAR},
+      </if>
+      <if test="creatorid != null" >
+        creatorid = #{creatorid,jdbcType=INTEGER},
+      </if>
+      <if test="departmentid != null" >
+        departmentid = #{departmentid,jdbcType=INTEGER},
+      </if>
+      <if test="companyid != null" >
+        companyid = #{companyid,jdbcType=INTEGER},
+      </if>
+      <if test="projectdetail != null" >
+        projectdetail = #{projectdetail,jdbcType=VARCHAR},
+      </if>
+      <if test="visible != null" >
+        visible = #{visible,jdbcType=TINYINT},
+      </if>
+    </set>
+    where pid = #{pid,jdbcType=INTEGER}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.migu.cn.dao.entity.ProjectCriteria" >
+    update project
+    set name = #{name,jdbcType=VARCHAR},
+      creatorid = #{creatorid,jdbcType=INTEGER},
+      departmentid = #{departmentid,jdbcType=INTEGER},
+      companyid = #{companyid,jdbcType=INTEGER},
+      projectdetail = #{projectdetail,jdbcType=VARCHAR},
+      visible = #{visible,jdbcType=TINYINT}
+    where pid = #{pid,jdbcType=INTEGER}
+  </update>
+  
+  <select id="selectByCriteria" parameterType="com.migu.cn.dao.entity.ProjectCriteria" resultMap="BaseResultMap">
+    SELECT * FROM project WHERE 1=1 
+    <if test="fuzzyKey != null and fuzzyKey != '' ">
+       AND name LIKE CONCAT ('%',#{fuzzyKey},'%')
+    </if>
+    LIMIT 10
+  </select>
+  
+</mapper>
