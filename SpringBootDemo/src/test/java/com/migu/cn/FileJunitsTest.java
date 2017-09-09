@@ -3,9 +3,12 @@ package com.migu.cn;
 import javax.annotation.Resource;
 
 import com.migu.cn.dao.entity.RedisModel;
+import com.migu.cn.kafka.KafkaProducer;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import com.migu.cn.dao.inf.ProjectDOMapper;
@@ -19,20 +22,24 @@ public class FileJunitsTest {
 	@Resource(name="RedisServiceImpl")
 	private RedisServiceImpl redisService;
 
+	@Autowired
+	private KafkaProducer kafkaProducer;
+
+	@Autowired
+	private KafkaTemplate<String,String> kafkaTemplate;
+
 	@Test
 	public void test(){
 		System.out.println(projectDOMapper.selectByPrimaryKey(12).getName());
 	}
 	
-   @Test
-	public void testRedis(){
-//	   RedisModel redisModel=new RedisModel();
-//	   redisModel.setRedisKey("lile04");
-//	   redisModel.setName("lile4");
-//	   redisModel.setAddress("119.23.12.2333");
-//	   redisService.put(redisModel.getRedisKey(),redisModel,10);
-	   System.out.println(redisService.getAll());
-   }
+    @Test
+	public void testKafka(){
+//		kafkaTemplate.send("spms","李乐测试kakfa123");
+		kafkaProducer.send("lile","xxx");
+		System.out.println("发送成功");
+
+	}
 
 
 }

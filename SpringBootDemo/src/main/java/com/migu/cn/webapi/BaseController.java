@@ -4,12 +4,15 @@ import java.io.BufferedReader;
 import java.lang.reflect.Field;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.migu.cn.utils.JsonTool;
 import com.migu.cn.utils.ServiceException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 /**
  * Created by le on 2017/6/28.
@@ -76,4 +79,14 @@ public class BaseController {
         result.setRemark("成功");
         return JsonTool.dataToJson(result);
     }
+
+    @ResponseBody
+    @ExceptionHandler
+    private String handlerException(HttpServletRequest request, HttpServletResponse response, Throwable ex){
+        BaseResponse errorResponse  = new BaseResponse();
+        errorResponse.setRemark("系统服务器异常");
+//        throw new ServiceException("系统服务器异常");
+        return JsonTool.dataToJson(errorResponse);
+    }
+
 }

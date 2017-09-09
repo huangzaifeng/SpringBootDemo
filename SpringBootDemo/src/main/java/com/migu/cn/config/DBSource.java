@@ -14,7 +14,7 @@ import org.springframework.core.env.Environment;
  */
 @Configuration
 @ConfigurationProperties(prefix = "mysql")
-@PropertySource(value = {"file:D:/spmsResource/mysql.properties"})
+@PropertySource(value = {"file:D:/spmspath/mysql.properties"})
 public class DBSource {
     @Autowired
     private Environment env;

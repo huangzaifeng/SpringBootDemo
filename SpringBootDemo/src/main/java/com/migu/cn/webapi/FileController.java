@@ -11,7 +11,7 @@ import javax.annotation.Resource;
  */
 @RestController()
 @RequestMapping("/file")
-public class FileController {
+public class FileController extends BaseController{
     @Resource(name = "baseService")
     private BaseService baseService;
     @RequestMapping(value = "/hello")

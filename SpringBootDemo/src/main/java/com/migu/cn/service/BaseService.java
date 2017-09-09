@@ -18,7 +18,7 @@ public class BaseService {
     private ProjectDOMapper projectDao;
 
     public String say(){
-        ProjectDO projectDO= projectDao.selectByPrimaryKey(12);
+        ProjectDO projectDO= projectDao.selectByPrimaryKey(1100);
         logger.info(projectDO.getProjectdetail());
         return projectDO.getName();
     }
