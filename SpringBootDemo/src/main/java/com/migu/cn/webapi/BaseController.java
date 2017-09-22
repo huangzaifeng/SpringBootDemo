@@ -2,15 +2,21 @@ package com.migu.cn.webapi;
 
 import java.io.BufferedReader;
 import java.lang.reflect.Field;
+import java.util.Date;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.migu.cn.elasticsearch.Article;
+import com.migu.cn.elasticsearch.ArticleSearchRepository;
+import com.migu.cn.elasticsearch.ArticleService;
+import com.migu.cn.kafka.KafkaProducer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.migu.cn.utils.JsonTool;
 import com.migu.cn.utils.ServiceException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
 
@@ -19,6 +25,13 @@ import org.springframework.web.bind.annotation.ResponseBody;
  */
 public class BaseController {
     private static Logger logger = LoggerFactory.getLogger(BaseController.class);
+
+    @Autowired
+    private KafkaProducer kafkaProducer;
+
+    @Autowired
+    private ArticleService articleService;
+
     public <V> V  ParseMsg(HttpServletRequest req, Class<V> valueClass){
         return ParseMsg(req,valueClass, false);
     }
@@ -85,6 +98,12 @@ public class BaseController {
     private String handlerException(HttpServletRequest request, HttpServletResponse response, Throwable ex){
         BaseResponse errorResponse  = new BaseResponse();
         errorResponse.setRemark("系统服务器异常");
+        kafkaProducer.send(ex.getMessage());
+        Article article=new Article();
+        article.setTitle("系统服务器异常");
+        article.setContent(ex.getMessage());
+        article.setCreatedTime(new Date());
+        articleService.save(article);
 //        throw new ServiceException("系统服务器异常");
         return JsonTool.dataToJson(errorResponse);
     }
