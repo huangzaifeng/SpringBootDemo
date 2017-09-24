@@ -1,7 +1,4 @@
-package com.cmcc.cn.annotation;
-
-import com.cmcc.cn.annotation.elasticsearch.ElasticSearchDocument;
-import com.cmcc.cn.annotation.elasticsearch.ElasticSearchId;
+package com.cmcc.cn.annotation.elasticsearch;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
