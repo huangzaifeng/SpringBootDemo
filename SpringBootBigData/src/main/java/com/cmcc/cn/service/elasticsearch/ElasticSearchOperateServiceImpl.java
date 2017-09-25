@@ -2,7 +2,9 @@ package com.cmcc.cn.service.elasticsearch;
 
 import com.cmcc.cn.annotation.ParseAnnotationService;
 import com.cmcc.cn.annotation.elasticsearch.ElasticSearchDocument;
+import com.cmcc.cn.annotation.elasticsearch.ElasticSearchId;
 import com.cmcc.cn.config.ElasticsearchConfig;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import net.sf.corn.cps.CPScanner;
 import net.sf.corn.cps.PackageNameFilter;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
@@ -19,6 +21,7 @@ import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +33,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -93,7 +97,7 @@ public class ElasticSearchOperateServiceImpl implements ElasticSearchOperateServ
        //获取类的所有注解
         short shards=1;
         short replicas=1;
-        Annotation[]  annotations=Class.getClass().getAnnotations();
+        Annotation[]  annotations=Class.getClass().getAnnotatedSuperclass().getAnnotations();
         for(Annotation annotation:annotations){
             if(annotation instanceof ElasticSearchDocument){
                 ElasticSearchDocument documentAnnotation=(ElasticSearchDocument) annotation;
@@ -112,6 +116,8 @@ public class ElasticSearchOperateServiceImpl implements ElasticSearchOperateServ
                   .put("index.number_of_shards", shards)
                   .put("index.number_of_replicas", replicas)
                   .build();
+          ObjectMapper mapper = new ObjectMapper();
+          byte[] json=mapper.writeValueAsBytes(Class);
           //创建mapper
           XContentBuilder mappingBuilder=null;
           try {
@@ -132,6 +138,7 @@ public class ElasticSearchOperateServiceImpl implements ElasticSearchOperateServ
           PutMappingResponse response = indicesAdminClient
                   .preparePutMapping(index)
                   .setType(type)
+//                  .setSource(json, XContentType.JSON)
                   .setSource(mappingBuilder)
                   .get();
           return response.isAcknowledged();
@@ -142,7 +149,15 @@ public class ElasticSearchOperateServiceImpl implements ElasticSearchOperateServ
     public <T> void save(T Class) throws Exception {
         BulkRequestBuilder bulkRequest = client.prepareBulk();
         Map<String,Object> resource=annotationService.gainFieldValue(Class);
-        bulkRequest.add(client.prepareIndex(index,type).setSource(resource));
+        Field[]  fields=Class.getClass().getDeclaredFields();
+        /*检查Class属性中ElasticsearchId是否为空*/
+        String elasticSearchIdIsNull=gainElasticsearchIdProperties(Class);
+        /*判断类属性中id是否为空*/
+        if(!StringUtils.isEmpty(elasticSearchIdIsNull)){
+            bulkRequest.add(client.prepareIndex(index,type,elasticSearchIdIsNull).setSource(resource));
+        }else{
+            bulkRequest.add(client.prepareIndex(index,type).setSource(resource));
+        }
         BulkResponse bulkResponse=bulkRequest.get();
         if (bulkResponse.hasFailures()) {
             logger.error("批量创建索引错误！");
@@ -177,14 +192,20 @@ public class ElasticSearchOperateServiceImpl implements ElasticSearchOperateServ
                 .build();
 
         for(T obj:Class){
-            bulkProcessor.add(new IndexRequest(index,type).source(annotationService.gainFieldValue(obj)));
+        /*判断类属性中id是否为空*/
+            String elasticSearchIdIsNull=gainElasticsearchIdProperties(Class);
+            if(!StringUtils.isEmpty(elasticSearchIdIsNull)){
+                bulkProcessor.add(new IndexRequest(index,type,elasticSearchIdIsNull).source(annotationService.gainFieldValue(obj)));
+            }else{
+                bulkProcessor.add(new IndexRequest(index,type).source(annotationService.gainFieldValue(obj)));
+            }
         }
         bulkProcessor.flush();
         bulkProcessor.awaitClose(10, TimeUnit.MINUTES);
     }
 
     @PostConstruct
-    private void init(){
+    private void init() throws Exception{
         List<Class<?>> classes = CPScanner.scanClasses(
                 new PackageNameFilter("com.cmcc.cn.*"));
         /*获取ElasticSearchDocument注解*/
@@ -193,7 +214,28 @@ public class ElasticSearchOperateServiceImpl implements ElasticSearchOperateServ
                 ElasticSearchDocument documentAnnotation = clazz.getAnnotation(ElasticSearchDocument.class);
                 index = documentAnnotation.indexName();
                 type = documentAnnotation.type();
+                /*初始化创建索引*/
+                createIndex(clazz);
             }
         }
     }
+
+    private <T> String  gainElasticsearchIdProperties(T clazz){
+        /*检查Class属性中ElasticsearchId是否为空*/
+        Field[] fields=clazz.getClass().getDeclaredFields();
+        String elasticSearchIdIsNull="Y";
+        String elasticSearchId=null;
+        for(Field field:fields){
+            field.setAccessible(true);
+            if(field.getAnnotation(ElasticSearchId.class)!=null){
+                ElasticSearchId elasticSearchIdAnnotation=field.getAnnotation(ElasticSearchId.class);
+                String isNull=elasticSearchIdAnnotation.isNull();
+                if(isNull.equals("N")){
+                    elasticSearchId=elasticSearchIdAnnotation.id();
+                }
+            }
+        }
+        return elasticSearchId;
+    }
+
 }

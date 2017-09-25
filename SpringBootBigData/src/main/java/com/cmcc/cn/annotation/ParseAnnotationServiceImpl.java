@@ -2,6 +2,7 @@ package com.cmcc.cn.annotation;
 
 import org.springframework.stereotype.Service;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
@@ -38,4 +39,5 @@ public class ParseAnnotationServiceImpl implements ParseAnnotationService {
         }
         return resource;
     }
+
 }

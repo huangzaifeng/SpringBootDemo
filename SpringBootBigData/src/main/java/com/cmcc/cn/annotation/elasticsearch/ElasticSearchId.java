@@ -11,6 +11,13 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ElasticSearchId {
+
+   /*索引id*/
    String id() default "0";
+
+   /*id类型*/
    String type() default "uuid";
+
+   /*是否为空*/
+   String isNull() default "Y";
 }

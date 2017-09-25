@@ -1,5 +1,6 @@
 package com.cmcc.cn.annotation;
 
+import java.lang.annotation.Annotation;
 import java.util.Map;
 
 /**
