@@ -27,4 +27,7 @@ public interface ElasticSearchOperateService {
 
      /*精确匹配查询*/
      <T extends ElasticsearchBasePage> List<T> search(T valueClass ) throws Exception;
+
+     /*删除*/
+     <T> void deleteByCriteria(T valueClass) throws Exception;
 }

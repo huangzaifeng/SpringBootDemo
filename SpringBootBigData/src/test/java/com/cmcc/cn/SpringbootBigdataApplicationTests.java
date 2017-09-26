@@ -46,16 +46,18 @@ public class SpringbootBigdataApplicationTests {
 	public void testParseAnnotation() throws Exception {
 //		List<Article> articleList=new ArrayList<Article>();
 		Article article=new Article();
-		article.setTitle("spms_permit_service1");
+//		article.setId("1201");
+		article.setTitle("spms_permit_service");
 		article.setPageNo(1);
-		article.setPageSize(2);
+		article.setPageSize(10);
 //		article.setId("1201");
 //		article.setTitle("spms_permit_service1");
 //		article.setContext("this is error logs");
 //		article.setDate(new Date());
 //		articleList.add(article);
-		List<Article> result=elasticSearchOperateService.search(article);
-		System.out.println(result);
+//		List<Article> result=elasticSearchOperateService.search(article);
+//		elasticSearchOperateService.deleteByCriteria(article);
+		elasticSearchOperateService.search(article);
 	}
 
 }

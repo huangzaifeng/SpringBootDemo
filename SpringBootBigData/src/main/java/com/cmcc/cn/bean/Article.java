@@ -28,6 +28,4 @@ public class Article extends ElasticsearchBasePage implements Serializable {
     @JsonFormat (shape = JsonFormat.Shape.STRING, pattern ="yyyy-MM-dd'T'HH:mm:ss.SSSZZ")
     @CreatedDate
     private String date;
-
-
 }

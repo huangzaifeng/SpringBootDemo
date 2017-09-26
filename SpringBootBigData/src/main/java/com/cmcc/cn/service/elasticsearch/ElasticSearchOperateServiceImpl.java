@@ -1,25 +1,22 @@
 package com.cmcc.cn.service.elasticsearch;
 
-import com.alibaba.fastjson.JSON;
 import com.cmcc.cn.annotation.ParseAnnotationService;
 import com.cmcc.cn.annotation.elasticsearch.ElasticSearchDocument;
 import com.cmcc.cn.annotation.elasticsearch.ElasticSearchId;
-import com.cmcc.cn.bean.Article;
 import com.cmcc.cn.bean.ElasticsearchBasePage;
-import com.cmcc.cn.config.ElasticsearchConfig;
 import com.cmcc.cn.service.PublicService;
 import com.cmcc.cn.utils.JsonTool;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.sf.corn.cps.CPScanner;
 import net.sf.corn.cps.PackageNameFilter;
-import org.apache.lucene.search.BooleanQuery;
-import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.admin.indices.exists.types.TypesExistsResponse;
 import org.elasticsearch.action.admin.indices.mapping.put.PutMappingResponse;
 import org.elasticsearch.action.bulk.*;
+import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.index.IndexRequest;
-import org.elasticsearch.action.search.*;
+import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.IndicesAdminClient;
 import org.elasticsearch.common.settings.Settings;
@@ -28,31 +25,28 @@ import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
-import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.QueryStringQueryBuilder;
-import org.elasticsearch.script.ScriptService;
-import org.elasticsearch.script.ScriptType;
-import org.elasticsearch.script.mustache.SearchTemplateRequestBuilder;
+import org.elasticsearch.index.reindex.BulkByScrollResponse;
+import org.elasticsearch.index.reindex.DeleteByQueryAction;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
-import sun.reflect.annotation.AnnotationType;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -60,7 +54,7 @@ import java.util.concurrent.TimeUnit;
  */
 
 @Service("elasticSearchOperateService")
-public class ElasticSearchOperateServiceImpl extends PublicService implements ElasticSearchOperateService {
+public class ElasticSearchOperateServiceImpl extends ElasticSearchService implements ElasticSearchOperateService {
 
     private static Logger logger = LoggerFactory.getLogger(ElasticSearchOperateServiceImpl.class);
 
@@ -184,30 +178,7 @@ public class ElasticSearchOperateServiceImpl extends PublicService implements El
     @Override
     public <T> void save(List<T> valueClass) throws Exception {
         boolean  flag=true;
-        BulkProcessor bulkProcessor =BulkProcessor.builder(client, new BulkProcessor.Listener() {
-            @Override
-            public void beforeBulk(long l, BulkRequest bulkRequest) {
-
-            }
-
-            @Override
-            public void afterBulk(long l, BulkRequest bulkRequest, BulkResponse bulkResponse) {
-               if(bulkResponse.hasFailures()){
-                   logger.error("批量插入失败");
-               }
-            }
-
-            @Override
-            public void afterBulk(long l, BulkRequest bulkRequest, Throwable throwable) {
-
-            }
-        }).setBulkActions(1000)
-                .setBulkSize(new ByteSizeValue(5, ByteSizeUnit.MB))
-                .setFlushInterval(TimeValue.timeValueSeconds(5))
-                .setConcurrentRequests(1)
-                .setBackoffPolicy( BackoffPolicy.exponentialBackoff(TimeValue.timeValueMillis(100), 3))
-                .build();
-
+        BulkProcessor bulkProcessor=bulkProcess(client);
         for(T obj:valueClass){
         /*判断类属性中id是否为空*/
             Object[] elasticSearchIdIsNull=gainElasticsearchIdProperties(obj);
@@ -226,7 +197,7 @@ public class ElasticSearchOperateServiceImpl extends PublicService implements El
         Map<String,Object> queryConditions=annotationService.gainFieldValue(valueClass);
         BoolQueryBuilder queryBuilder=QueryBuilders. boolQuery();
         for(Map.Entry<String,Object> entry:queryConditions.entrySet()){
-            queryBuilder.must(QueryBuilders.matchQuery(entry.getKey(),entry.getValue()));
+            queryBuilder.must(QueryBuilders.termQuery(entry.getKey(),entry.getValue()));
         }
         /*查询总数量*/
         SearchResponse responseCount = client.prepareSearch(index)
@@ -255,6 +226,32 @@ public class ElasticSearchOperateServiceImpl extends PublicService implements El
             beanList.add(bean);
         }
         return beanList;
+    }
+
+    @Override
+    public <T> void deleteByCriteria(T valueClass) throws Exception {
+        /*获取批量删除工具类*/
+        BulkProcessor bulkProcessor=bulkProcess(client);
+        /*获取需查询的条件*/
+        Map<String,Object> queryConditions=annotationService.gainFieldValue(valueClass);
+        BoolQueryBuilder queryBuilder=QueryBuilders. boolQuery();
+        for(Map.Entry<String,Object> entry:queryConditions.entrySet()){
+            queryBuilder.must(QueryBuilders.matchQuery(entry.getKey(),entry.getValue()));
+        }
+        /*根据查询条件搜索*/
+        SearchResponse response = client.prepareSearch(index)
+                .setTypes(type)
+                .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
+                .setQuery(queryBuilder)
+                .setExplain(true)
+                .get();
+        /*将搜索结果值添加到批量操作中*/
+        SearchHits searchHits = response.getHits();
+        for (SearchHit hit : searchHits) {
+            bulkProcessor.add(new DeleteRequest(index, type, hit.getId()));
+        }
+        bulkProcessor.flush();
+        bulkProcessor.awaitClose(10, TimeUnit.MINUTES);
     }
 
     @PostConstruct
