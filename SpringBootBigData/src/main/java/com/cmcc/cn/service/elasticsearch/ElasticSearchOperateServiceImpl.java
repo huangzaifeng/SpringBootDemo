@@ -1,18 +1,25 @@
 package com.cmcc.cn.service.elasticsearch;
 
+import com.alibaba.fastjson.JSON;
 import com.cmcc.cn.annotation.ParseAnnotationService;
 import com.cmcc.cn.annotation.elasticsearch.ElasticSearchDocument;
 import com.cmcc.cn.annotation.elasticsearch.ElasticSearchId;
+import com.cmcc.cn.bean.Article;
+import com.cmcc.cn.bean.ElasticsearchBasePage;
 import com.cmcc.cn.config.ElasticsearchConfig;
+import com.cmcc.cn.service.PublicService;
+import com.cmcc.cn.utils.JsonTool;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.sf.corn.cps.CPScanner;
 import net.sf.corn.cps.PackageNameFilter;
+import org.apache.lucene.search.BooleanQuery;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.admin.indices.exists.types.TypesExistsResponse;
 import org.elasticsearch.action.admin.indices.mapping.put.PutMappingResponse;
 import org.elasticsearch.action.bulk.*;
 import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.search.*;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.IndicesAdminClient;
 import org.elasticsearch.common.settings.Settings;
@@ -22,12 +29,23 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.QueryStringQueryBuilder;
+import org.elasticsearch.script.ScriptService;
+import org.elasticsearch.script.ScriptType;
+import org.elasticsearch.script.mustache.SearchTemplateRequestBuilder;
+import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.SearchHits;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.stereotype.Service;
+import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
+import sun.reflect.annotation.AnnotationType;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
@@ -42,7 +60,7 @@ import java.util.concurrent.TimeUnit;
  */
 
 @Service("elasticSearchOperateService")
-public class ElasticSearchOperateServiceImpl implements ElasticSearchOperateService {
+public class ElasticSearchOperateServiceImpl extends PublicService implements ElasticSearchOperateService {
 
     private static Logger logger = LoggerFactory.getLogger(ElasticSearchOperateServiceImpl.class);
 
@@ -93,11 +111,11 @@ public class ElasticSearchOperateServiceImpl implements ElasticSearchOperateServ
     }
 
     @Override
-    public <T> boolean createIndex(T Class) throws IllegalAccessException, IOException {
+    public <T> boolean createIndex(T valueClass) throws IllegalAccessException, IOException {
        //获取类的所有注解
         short shards=1;
         short replicas=1;
-        Annotation[]  annotations=Class.getClass().getAnnotatedSuperclass().getAnnotations();
+        Annotation[]  annotations=valueClass.getClass().getAnnotations();
         for(Annotation annotation:annotations){
             if(annotation instanceof ElasticSearchDocument){
                 ElasticSearchDocument documentAnnotation=(ElasticSearchDocument) annotation;
@@ -117,7 +135,7 @@ public class ElasticSearchOperateServiceImpl implements ElasticSearchOperateServ
                   .put("index.number_of_replicas", replicas)
                   .build();
           ObjectMapper mapper = new ObjectMapper();
-          byte[] json=mapper.writeValueAsBytes(Class);
+          byte[] json=mapper.writeValueAsBytes(valueClass);
           //创建mapper
           XContentBuilder mappingBuilder=null;
           try {
@@ -146,15 +164,14 @@ public class ElasticSearchOperateServiceImpl implements ElasticSearchOperateServ
     }
 
     @Override
-    public <T> void save(T Class) throws Exception {
+    public <T> void save(T valueClass) throws Exception {
         BulkRequestBuilder bulkRequest = client.prepareBulk();
-        Map<String,Object> resource=annotationService.gainFieldValue(Class);
-        Field[]  fields=Class.getClass().getDeclaredFields();
+        Map<String,Object> resource=annotationService.gainFieldValue(valueClass);
         /*检查Class属性中ElasticsearchId是否为空*/
-        String elasticSearchIdIsNull=gainElasticsearchIdProperties(Class);
+        Object[] elasticSearchIdIsNull=gainElasticsearchIdProperties(valueClass);
         /*判断类属性中id是否为空*/
-        if(!StringUtils.isEmpty(elasticSearchIdIsNull)){
-            bulkRequest.add(client.prepareIndex(index,type,elasticSearchIdIsNull).setSource(resource));
+        if(!ObjectUtils.isEmpty(elasticSearchIdIsNull)&&"N".equals(elasticSearchIdIsNull[0])){
+            bulkRequest.add(client.prepareIndex(index,type,elasticSearchIdIsNull[1].toString()).setSource(resource));
         }else{
             bulkRequest.add(client.prepareIndex(index,type).setSource(resource));
         }
@@ -165,7 +182,7 @@ public class ElasticSearchOperateServiceImpl implements ElasticSearchOperateServ
     }
 
     @Override
-    public <T> void save(List<T> Class) throws Exception {
+    public <T> void save(List<T> valueClass) throws Exception {
         boolean  flag=true;
         BulkProcessor bulkProcessor =BulkProcessor.builder(client, new BulkProcessor.Listener() {
             @Override
@@ -191,17 +208,53 @@ public class ElasticSearchOperateServiceImpl implements ElasticSearchOperateServ
                 .setBackoffPolicy( BackoffPolicy.exponentialBackoff(TimeValue.timeValueMillis(100), 3))
                 .build();
 
-        for(T obj:Class){
+        for(T obj:valueClass){
         /*判断类属性中id是否为空*/
-            String elasticSearchIdIsNull=gainElasticsearchIdProperties(Class);
-            if(!StringUtils.isEmpty(elasticSearchIdIsNull)){
-                bulkProcessor.add(new IndexRequest(index,type,elasticSearchIdIsNull).source(annotationService.gainFieldValue(obj)));
+            Object[] elasticSearchIdIsNull=gainElasticsearchIdProperties(obj);
+            if(!ObjectUtils.isEmpty(elasticSearchIdIsNull)&&"N".equals(elasticSearchIdIsNull[0])){
+                bulkProcessor.add(new IndexRequest(index,type,elasticSearchIdIsNull[1].toString()).source(annotationService.gainFieldValue(obj)));
             }else{
                 bulkProcessor.add(new IndexRequest(index,type).source(annotationService.gainFieldValue(obj)));
             }
         }
         bulkProcessor.flush();
         bulkProcessor.awaitClose(10, TimeUnit.MINUTES);
+    }
+
+    @Override
+    public   <T extends ElasticsearchBasePage> List<T> search(T valueClass) throws Exception {
+        Map<String,Object> queryConditions=annotationService.gainFieldValue(valueClass);
+        BoolQueryBuilder queryBuilder=QueryBuilders. boolQuery();
+        for(Map.Entry<String,Object> entry:queryConditions.entrySet()){
+            queryBuilder.must(QueryBuilders.matchQuery(entry.getKey(),entry.getValue()));
+        }
+        /*查询总数量*/
+        SearchResponse responseCount = client.prepareSearch(index)
+                .setTypes(type)
+                .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
+                .setQuery(queryBuilder)
+                .setExplain(true)
+                .get();
+        int totalCount=(int)responseCount.getHits().totalHits;
+        /*设置分页参数*/
+        ElasticsearchBasePage basePage=setBasePage(valueClass,totalCount);
+        /*设置获取的起始行*/
+        SearchResponse response = client.prepareSearch(index)
+                .setTypes(type)
+                .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
+                .setQuery(queryBuilder)
+                .setFrom(basePage.getRowSrt()).setSize(basePage.getRowEnd()+1)
+                .setExplain(true)
+                .get();
+
+        List<T> beanList = new ArrayList<T>();
+        SearchHits searchHits = response.getHits();
+        for (SearchHit hit : searchHits) {
+            String resource=hit.getSourceAsString();
+            T bean = (T)JsonTool.jsonToObject(resource,valueClass.getClass(),true);
+            beanList.add(bean);
+        }
+        return beanList;
     }
 
     @PostConstruct
@@ -220,22 +273,24 @@ public class ElasticSearchOperateServiceImpl implements ElasticSearchOperateServ
         }
     }
 
-    private <T> String  gainElasticsearchIdProperties(T clazz){
+    private <T> Object[]  gainElasticsearchIdProperties(T clazz) throws IllegalAccessException {
         /*检查Class属性中ElasticsearchId是否为空*/
         Field[] fields=clazz.getClass().getDeclaredFields();
         String elasticSearchIdIsNull="Y";
-        String elasticSearchId=null;
         for(Field field:fields){
+            String fieldName=field.getName();
             field.setAccessible(true);
-            if(field.getAnnotation(ElasticSearchId.class)!=null){
+            if(field.isAnnotationPresent(ElasticSearchId.class)){
                 ElasticSearchId elasticSearchIdAnnotation=field.getAnnotation(ElasticSearchId.class);
-                String isNull=elasticSearchIdAnnotation.isNull();
-                if(isNull.equals("N")){
-                    elasticSearchId=elasticSearchIdAnnotation.id();
+                Object id=field.get(clazz);
+                if(!ObjectUtils.isEmpty(id)){
+                    elasticSearchIdIsNull="N";
                 }
+                Object[] elasticsearchIdProperties={elasticSearchIdIsNull,id};
+                return elasticsearchIdProperties;
             }
         }
-        return elasticSearchId;
+        return null;
     }
 
 }

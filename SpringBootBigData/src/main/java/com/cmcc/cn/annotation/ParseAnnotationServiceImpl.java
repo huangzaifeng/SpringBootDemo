@@ -1,6 +1,7 @@
 package com.cmcc.cn.annotation;
 
 import org.springframework.stereotype.Service;
+import org.springframework.util.ObjectUtils;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
@@ -21,8 +22,10 @@ public class ParseAnnotationServiceImpl implements ParseAnnotationService {
         for(Field field:fields){
             field.setAccessible(true);
             String key=field.getName();
-            Object value=field.get(object);
-            resource.put(key,value);
+            if(!ObjectUtils.isEmpty(field.get(object))){
+                Object value=field.get(object);
+                resource.put(key,value);
+            }
         }
         return resource;
     }

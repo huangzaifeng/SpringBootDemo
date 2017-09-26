@@ -15,7 +15,7 @@ import java.text.SimpleDateFormat;
  * Created by le on 2017/6/28.
  */
 public class JsonTool {
-    public static <V> V jsonToObject(String data, Class<V> valueClass, boolean fullmap) {
+    public static <T> T jsonToObject(String data, Class<T> valueClass, boolean fullmap) {
 
         ObjectMapper objectMapper = new ObjectMapper();
         try {

@@ -14,9 +14,9 @@ import java.util.Date;
  */
 @Data
 @ElasticSearchDocument(indexName = "migu",type = "errorLog1",shards = 2)
-public class Article implements Serializable {
+public class Article extends ElasticsearchBasePage implements Serializable {
     /*索引id*/
-    @ElasticSearchId(isNull = "Y")
+    @ElasticSearchId(isNull = "N")
     private String id;
 
     /**标题*/
@@ -27,7 +27,7 @@ public class Article implements Serializable {
 
     @JsonFormat (shape = JsonFormat.Shape.STRING, pattern ="yyyy-MM-dd'T'HH:mm:ss.SSSZZ")
     @CreatedDate
-    private Date date;
+    private String date;
 
 
 }
