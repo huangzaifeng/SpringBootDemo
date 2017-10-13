@@ -12,7 +12,7 @@ import java.io.StringWriter;
 import java.text.SimpleDateFormat;
 
 /**
- * Created by le on 2017/6/28.
+ * Created by le on 2017/62d/28.
  */
 public class JsonTool {
     public static <T> T jsonToObject(String data, Class<T> valueClass, boolean fullmap) {

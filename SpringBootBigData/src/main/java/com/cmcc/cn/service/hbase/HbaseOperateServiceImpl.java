@@ -7,15 +7,13 @@ import com.cmcc.cn.service.hbase.inf.HbaseIOperateService;
 import com.cmcc.cn.utils.JsonTool;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -88,7 +86,35 @@ public class HbaseOperateServiceImpl extends HbaseServiceImpl implements HbaseIO
 
     @Override
     public <T> List<T> scanHbase(T valueClass) throws Exception {
-        return null;
+        List<T> resultListBean=new ArrayList<T>();
+        if(valueClass.getClass().isAnnotationPresent(HbaseAnnotation.class)){
+            Map<String,Object> fieldValue= annotationService.gainFieldValue(valueClass);
+            HbaseAnnotation hbaseAnnotation=valueClass.getClass().getAnnotation(HbaseAnnotation.class);
+            String tableName=hbaseAnnotation.tableName();
+            String family=hbaseAnnotation.family();
+            String column=hbaseAnnotation.column();
+            /*设置scan属性*/
+            Scan scan=new Scan();
+            if(!StringUtils.isEmpty(family)&&!StringUtils.isEmpty(column)){
+                scan.addColumn(family.getBytes(),column.getBytes());
+            }
+            if(fieldValue.containsKey("startRowKey")){
+                scan.setStartRow(fieldValue.get("startRowKey").toString().getBytes());
+            }
+            if(fieldValue.containsKey("endRowKey")){
+                scan.setStartRow(fieldValue.get("endRowKey").toString().getBytes());
+            }
+            Table table=hbaseIClientService.buildTable(tableName);
+            ResultScanner resultScaner=table.getScanner(scan);
+            Iterator<Result> resultIterator=resultScaner.iterator();
+            while (resultIterator.hasNext()){
+                Result result=resultIterator.next();
+                byte[] resultByte=result.getValue(family.getBytes(),column.getBytes());
+                T resultBean=(T)JsonTool.jsonToObject(Bytes.toString(resultByte),valueClass.getClass(),true);
+                resultListBean.add(resultBean);
+            }
+        }
+        return resultListBean;
     }
 
     @Override
@@ -114,9 +140,7 @@ public class HbaseOperateServiceImpl extends HbaseServiceImpl implements HbaseIO
             }else{
                 throw new RuntimeException(valueClass.getClass().getName()+"没有rowkey无法获取数据");
             }
-
         }
-
         return null;
     }
 
