@@ -1,6 +1,5 @@
 package com.cmcc.cn.annotation;
 
-import java.lang.annotation.Annotation;
 import java.util.Map;
 
 /**
@@ -9,7 +8,7 @@ import java.util.Map;
 public interface ParseAnnotationService {
 
    /*
-   * 获取类属性key->value值方法
+   * 获取本身类及超类的上属性key->value值方法
    * */
     Map<String,Object> gainFieldValue(Object object) throws IllegalAccessException;
 

@@ -2,7 +2,9 @@ package com.cmcc.cn.service;
 
 import com.cmcc.cn.bean.ElasticsearchBasePage;
 
+import java.lang.annotation.Annotation;
 import java.rmi.Remote;
+import java.util.List;
 
 /**
  * @ClassName: IService  
@@ -21,4 +23,8 @@ public interface IService extends Remote {
 	 * @throws  
 	 */  
 	public <T extends ElasticsearchBasePage> ElasticsearchBasePage setBasePage(T qryCriteria, int count);
+
+    public List<Class<?>> findTargetClass(String packageName, Class<? extends Annotation> annotationClass);
+
+
 }

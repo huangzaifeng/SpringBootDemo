@@ -4,7 +4,6 @@ import com.cmcc.cn.annotation.ParseAnnotationService;
 import com.cmcc.cn.annotation.elasticsearch.ElasticSearchDocument;
 import com.cmcc.cn.annotation.elasticsearch.ElasticSearchId;
 import com.cmcc.cn.bean.ElasticsearchBasePage;
-import com.cmcc.cn.service.PublicService;
 import com.cmcc.cn.utils.JsonTool;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.sf.corn.cps.CPScanner;
@@ -12,7 +11,9 @@ import net.sf.corn.cps.PackageNameFilter;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.admin.indices.exists.types.TypesExistsResponse;
 import org.elasticsearch.action.admin.indices.mapping.put.PutMappingResponse;
-import org.elasticsearch.action.bulk.*;
+import org.elasticsearch.action.bulk.BulkProcessor;
+import org.elasticsearch.action.bulk.BulkRequestBuilder;
+import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.search.SearchResponse;
@@ -20,15 +21,10 @@ import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.IndicesAdminClient;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.unit.ByteSizeUnit;
-import org.elasticsearch.common.unit.ByteSizeValue;
-import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.reindex.BulkByScrollResponse;
-import org.elasticsearch.index.reindex.DeleteByQueryAction;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.slf4j.Logger;
@@ -38,7 +34,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
@@ -222,7 +217,7 @@ public class ElasticSearchOperateServiceImpl extends ElasticSearchService implem
         SearchHits searchHits = response.getHits();
         for (SearchHit hit : searchHits) {
             String resource=hit.getSourceAsString();
-            T bean = (T)JsonTool.jsonToObject(resource,valueClass.getClass(),true);
+            T bean = (T) JsonTool.jsonToObject(resource,valueClass.getClass(),true);
             beanList.add(bean);
         }
         return beanList;
@@ -254,7 +249,7 @@ public class ElasticSearchOperateServiceImpl extends ElasticSearchService implem
         bulkProcessor.awaitClose(10, TimeUnit.MINUTES);
     }
 
-    @PostConstruct
+//    @PostConstruct
     private void init() throws Exception{
         List<Class<?>> classes = CPScanner.scanClasses(
                 new PackageNameFilter("com.cmcc.cn.*"));

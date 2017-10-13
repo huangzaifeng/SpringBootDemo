@@ -2,8 +2,6 @@ package com.cmcc.cn.annotation.elasticsearch;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Created by le on 2017/9/14.

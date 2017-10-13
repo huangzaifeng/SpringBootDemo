@@ -16,7 +16,7 @@ public interface ElasticSearchOperateService {
      boolean isIndexExists(String index);
 
     /*判断集群是否存在改类型*/
-    boolean isTypeExists(String index,String type);
+    boolean isTypeExists(String index, String type);
 
     /*创建索引*/
      <T> boolean createIndex(T valueClass) throws IllegalAccessException, IOException;
@@ -26,7 +26,7 @@ public interface ElasticSearchOperateService {
      <T> void save(List<T> valueClass) throws Exception ;
 
      /*精确匹配查询*/
-     <T extends ElasticsearchBasePage> List<T> search(T valueClass ) throws Exception;
+     <T extends ElasticsearchBasePage> List<T> search(T valueClass) throws Exception;
 
      /*删除*/
      <T> void deleteByCriteria(T valueClass) throws Exception;

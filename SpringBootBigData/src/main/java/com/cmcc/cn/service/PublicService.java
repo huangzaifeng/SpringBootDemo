@@ -1,17 +1,22 @@
 package com.cmcc.cn.service;
 
 import com.cmcc.cn.bean.ElasticsearchBasePage;
+import net.sf.corn.cps.CPScanner;
+import net.sf.corn.cps.PackageNameFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
+
+import java.lang.annotation.Annotation;
+import java.util.ArrayList;
+import java.util.List;
 
 /**  
  * @ClassName: PublicService  
  * @Description:若需要分页查询-请继承该类
- * @author wcr
+ * @author
  * @date 2017年3月30日     
  */
-public  abstract class PublicService implements IService {
+public abstract class PublicService implements IService {
 	private static Logger logger = LoggerFactory.getLogger(PublicService.class);
 	
 	@Override
@@ -49,4 +54,19 @@ public  abstract class PublicService implements IService {
 		}
 		return baseForm;
 	}
+
+	@Override
+	public  List<Class<?>> findTargetClass(String packageName,Class<? extends Annotation> annotationClass) {
+		List<Class<?>> valueClass=new ArrayList<Class<?>>();
+		List<Class<?>> classes = CPScanner.scanClasses(
+				new PackageNameFilter(packageName));
+		for(Class<?> clazz: classes) {
+			if (clazz.isAnnotationPresent(annotationClass)) {
+				valueClass.add(clazz);
+			}
+		}
+		return valueClass;
+	}
+
+
 }
