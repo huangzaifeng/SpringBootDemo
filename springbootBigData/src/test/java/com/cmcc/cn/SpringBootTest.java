@@ -3,11 +3,13 @@ package com.cmcc.cn;
 import com.cmcc.cn.annotation.ParseAnnotationService;
 import com.cmcc.cn.bean.Student;
 import com.cmcc.cn.service.hbase.inf.HbaseIOperateService;
+import com.cmcc.cn.service.redis.RedisIService;
 import com.cmcc.cn.service.storm.StormOperateServer;
 import org.apache.storm.Config;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.test.context.junit4.SpringRunner;
+import redis.clients.jedis.JedisPool;
 
 import javax.annotation.Resource;
 import java.util.Arrays;
@@ -27,6 +29,9 @@ public class SpringBootTest {
     @Resource(name = "stormOperateService")
     private StormOperateServer stormOperateServer;
 
+    @Resource(name = "redisService")
+    private RedisIService redisIService;
+
     @Test
     public void contextLoads() throws Exception {
         System.out.println("---------------");
@@ -45,6 +50,11 @@ public class SpringBootTest {
         conf.setDebug(true);
         conf.setMaxTaskParallelism(2);
         stormOperateServer.autoBuildStormTopology("SpringStorm",conf,"local");
+    }
+
+    @Test
+    public  void testRedis(){
+        redisIService.set("lile","ll2");
     }
 
 }
