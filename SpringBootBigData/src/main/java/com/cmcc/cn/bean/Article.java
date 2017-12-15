@@ -4,6 +4,7 @@ import com.cmcc.cn.annotation.elasticsearch.ElasticSearchDocument;
 import com.cmcc.cn.annotation.elasticsearch.ElasticSearchId;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
+import org.springframework.data.annotation.CreatedDate;
 //import org.springframework.data.annotation.CreatedDate;
 
 import java.io.Serializable;
@@ -25,6 +26,6 @@ public class Article extends ElasticsearchBasePage implements Serializable {
     private String context;
 
     @JsonFormat (shape = JsonFormat.Shape.STRING, pattern ="yyyy-MM-dd'T'HH:mm:ss.SSSZZ")
-//    @CreatedDate
+    @CreatedDate
     private String date;
 }

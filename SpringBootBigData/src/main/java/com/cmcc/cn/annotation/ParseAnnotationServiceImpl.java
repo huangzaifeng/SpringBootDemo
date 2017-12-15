@@ -14,7 +14,7 @@ import java.util.Map;
 public class ParseAnnotationServiceImpl implements ParseAnnotationService {
 
     @Override
-    public Map<String, Object> gainFieldValue(Object object) throws IllegalAccessException {
+    public Map<String, Object> gainSuperFieldValue(Object object) throws IllegalAccessException {
         Map<String,Object> resource=new HashMap<String,Object>();
         Field[] fields=object.getClass().getDeclaredFields();
 //        Assert.isNull(object,object.getClass()+"不能为空");
@@ -29,6 +29,21 @@ public class ParseAnnotationServiceImpl implements ParseAnnotationService {
         /*获取超类属性*/
         Field[] superFields=object.getClass().getSuperclass().getDeclaredFields();
         for(Field field:superFields){
+            field.setAccessible(true);
+            String key=field.getName();
+            if(!ObjectUtils.isEmpty(field.get(object))){
+                Object value=field.get(object);
+                resource.put(key,value);
+            }
+        }
+        return resource;
+    }
+
+    @Override
+    public Map<String, Object> gainFieldValue(Object object) throws IllegalAccessException {
+        Map<String,Object> resource=new HashMap<String,Object>();
+        Field[] fields=object.getClass().getDeclaredFields();
+        for(Field field:fields){
             field.setAccessible(true);
             String key=field.getName();
             if(!ObjectUtils.isEmpty(field.get(object))){

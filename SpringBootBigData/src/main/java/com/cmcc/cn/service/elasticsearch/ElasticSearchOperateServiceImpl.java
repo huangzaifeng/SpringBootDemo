@@ -16,11 +16,13 @@ import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.IndicesAdminClient;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.unit.Fuzziness;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.BoolQueryBuilder;
@@ -114,8 +116,8 @@ public class ElasticSearchOperateServiceImpl extends ElasticSearchService implem
                  replicas=documentAnnotation.replicas();
             }
         }
-      if(isIndexExists(index)&&isTypeExists(index,type)){
-          logger.info("elasticsearch集群已存在索引【{}】或类型【{}】",index,type);
+      if(!isIndexExists(index)&&!isTypeExists(index,type)){
+          logger.info("elasticsearch集群不存存在索引【{}】或类型【{}】,创建",index,type);
           return false;
       }else{
           // 创建settings
@@ -166,7 +168,7 @@ public class ElasticSearchOperateServiceImpl extends ElasticSearchService implem
         }
         BulkResponse bulkResponse=bulkRequest.get();
         if (bulkResponse.hasFailures()) {
-            logger.error("批量创建索引错误！");
+            logger.error("批量创建索引错误！:{}",bulkResponse.buildFailureMessage());
         }
     }
 
@@ -192,13 +194,19 @@ public class ElasticSearchOperateServiceImpl extends ElasticSearchService implem
         Map<String,Object> queryConditions=annotationService.gainFieldValue(valueClass);
         BoolQueryBuilder queryBuilder=QueryBuilders. boolQuery();
         for(Map.Entry<String,Object> entry:queryConditions.entrySet()){
+//            全字段模糊查询
+//            queryBuilder.must(QueryBuilders.queryStringQuery(entry.getValue().toString()));
+            //精确匹配你查询
             queryBuilder.must(QueryBuilders.termQuery(entry.getKey(),entry.getValue()));
+            //模糊查询
+//            queryBuilder.must(QueryBuilders.fuzzyQuery(entry.getKey(),entry.getValue()).fuzziness(Fuzziness.ONE));
         }
         /*查询总数量*/
         SearchResponse responseCount = client.prepareSearch(index)
                 .setTypes(type)
                 .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
                 .setQuery(queryBuilder)
+//                .setQuery(QueryBuilders.fuzzyQuery("context","功能").fuzziness(Fuzziness.ONE))
                 .setExplain(true)
                 .get();
         int totalCount=(int)responseCount.getHits().totalHits;
